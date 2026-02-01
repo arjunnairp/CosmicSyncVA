@@ -1,0 +1,30 @@
+# ---------- BUILD STAGE ----------
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy project files
+COPY API/API.csproj API/
+COPY Library/Library.csproj Library/
+
+# Restore dependencies
+RUN dotnet restore API/API.csproj
+
+# Copy full repo content
+COPY . .
+
+# Publish
+RUN dotnet publish API/API.csproj -c Release -o /app/publish
+
+# ---------- RUNTIME STAGE ----------
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+# Copy published files
+COPY --from=build /app/publish .
+
+# Render FREE plan: app MUST listen on PORT env var
+ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
+
+EXPOSE 8080
+
+CMD ["dotnet", "API.dll"]
